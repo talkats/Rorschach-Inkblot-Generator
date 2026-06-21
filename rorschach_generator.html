@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rorschach Inkblot Generator</title>
+  <style>
+    :root {
+      --bg: #f4f1ec;
+      --panel: #ffffff;
+      --ink: #171717;
+      --muted: #6d6a66;
+      --line: #ddd6cc;
+      --accent: #111111;
+      --soft: #f8f6f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0, var(--bg) 52%, #ebe5da 100%);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+    }
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 48px); letter-spacing: -0.04em; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); max-width: 720px; line-height: 1.45; }
+    .panel {
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.06);
+    }
+    .controls { padding: 22px; display: grid; gap: 18px; align-content: start; }
+    .group { display: grid; gap: 9px; }
+    label { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+    .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    select, textarea, input[type="color"] {
+      width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px;
+      background: #fff; font: inherit; color: var(--ink);
+    }
+    textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
+    .value { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 36px; text-align: right; }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button {
+      border: 0; border-radius: 15px; padding: 13px 14px; cursor: pointer;
+      background: var(--ink); color: #fff; font-weight: 800; letter-spacing: -0.01em;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: #ece6dc; color: var(--ink); }
+    button.full { grid-column: 1 / -1; }
+    .stage { padding: 22px; display: grid; gap: 16px; }
+    .canvasBox {
+      background: #fffdf9;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      min-height: 620px;
+    }
+    canvas { width: 100%; max-width: 720px; height: auto; display: block; }
+    .interpretation {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 18px; padding: 16px; line-height: 1.5;
+    }
+    .interpretation h2 { margin: 0 0 8px; font-size: 18px; }
+    .interpretation p { margin: 8px 0; color: #292827; }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } header { align-items: start; flex-direction: column; } .canvasBox { min-height: 420px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div>
+        <h1>Rorschach Inkblot Generator</h1>
+        <p class="subtitle">Create symmetrical inkblot images, write what you see, and get a playful personality-style reflection. This is for art, creativity, and self-reflection — not psychological diagnosis.</p>
+      </div>
+    </header>
+
+    <section class="panel controls">
+      <div class="group">
+        <label for="complexity">Complexity</label>
+        <div class="row"><input id="complexity" type="range" min="12" max="90" value="45"><span class="value" id="complexityVal">45</span></div>
+      </div>
+
+      <div class="group">
+        <label for="spread">Ink Spread</label>
+        <div class="row"><input id="spread" type="range" min="40" max="220" value="130"><span class="value" id="spreadVal">130</span></div>
+      </div>
+
+      <div class="group">
+        <label for="softness">Edge Softness</label>
+        <div class="row"><input id="softness" type="range" min="2" max="40" value="18"><span class="value" id="softnessVal">18</span></div>
+      </div>
+
+      <div class="group">
+        <label for="style">Ink Style</label>
+        <select id="style">
+          <option value="classic">Classic Black Ink</option>
+          <option value="warm">Warm Sepia</option>
+          <option value="blue">Clinical Blue</option>
+          <option value="color">Controlled Color</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label for="accentColor">Custom Color</label>
+        <input id="accentColor" type="color" value="#1f2937">
+      </div>
+
+      <div class="buttons">
+        <button id="generate">Generate</button>
+        <button class="secondary" id="clear">Clear Text</button>
+        <button class="secondary" id="downloadPng">Export PNG</button>
+        <button class="secondary" id="downloadSvg">Export SVG</button>
+      </div>
+
+      <div class="group">
+        <label for="vision">What do you see?</label>
+        <textarea id="vision" placeholder="Example: I see a butterfly, a mask, two animals facing each other..."></textarea>
+        <button class="full" id="interpret">Interpret My Answer</button>
+      </div>
+      <p class="note">The interpretation is symbolic and playful. It should not be used as a clinical or psychological assessment.</p>
+    </section>
+
+    <section class="panel stage">
+      <div class="canvasBox"><canvas id="canvas" width="1200" height="1200"></canvas></div>
+      <div class="interpretation" id="result">
+        <h2>Your reflection will appear here</h2>
+        <p>Generate an inkblot, write what you see, then click “Interpret My Answer”.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    let lastBlobs = [];
+
+    const els = ['complexity','spread','softness'].reduce((a,id)=>{a[id]=document.getElementById(id);a[id+'Val']=document.getElementById(id+'Val');return a;},{});
+    ['complexity','spread','softness'].forEach(id => els[id].addEventListener('input', () => { els[id+'Val'].textContent = els[id].value; generate(); }));
+    document.getElementById('style').addEventListener('change', generate);
+    document.getElementById('accentColor').addEventListener('input', generate);
+    document.getElementById('generate').addEventListener('click', generate);
+    document.getElementById('clear').addEventListener('click', () => { document.getElementById('vision').value=''; resetResult(); });
+    document.getElementById('interpret').addEventListener('click', interpret);
+    document.getElementById('downloadPng').addEventListener('click', downloadPNG);
+    document.getElementById('downloadSvg').addEventListener('click', downloadSVG);
+
+    function colorFor(i, alpha=1) {
+      const style = document.getElementById('style').value;
+      const custom = document.getElementById('accentColor').value;
+      if (style === 'classic') return `rgba(12,12,12,${alpha})`;
+      if (style === 'warm') return `rgba(${70+i%30},${43+i%20},${26+i%15},${alpha})`;
+      if (style === 'blue') return `rgba(${15+i%18},${45+i%35},${85+i%55},${alpha})`;
+      const rgb = hexToRgb(custom);
+      const shift = (i % 4) * 16;
+      return `rgba(${Math.min(255,rgb.r+shift)},${Math.min(255,rgb.g+shift/2)},${Math.min(255,rgb.b+shift)},${alpha})`;
+    }
+    function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+    function rand(min,max){ return min + Math.random()*(max-min); }
+
+    function generate(){
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = '#fffdf9'; ctx.fillRect(0,0,W,H);
+      lastBlobs = [];
+      const complexity = +els.complexity.value;
+      const spread = +els.spread.value;
+      const softness = +els.softness.value;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      for (let i=0; i<complexity; i++) {
+        const x = rand(80, spread + 260);
+        const y = rand(170, H-170);
+        const rx = rand(18, 95) * rand(.55, 1.25);
+        const ry = rand(18, 120) * rand(.55, 1.35);
+        const rot = rand(-1.2, 1.2);
+        const alpha = rand(.18,.68);
+        const c = colorFor(i, alpha);
+        drawBlob(W/2 - x, y, rx, ry, rot, c, softness, i);
+        drawBlob(W/2 + x, y, rx, ry, -rot, c, softness, i, true);
+        lastBlobs.push({x,y,rx,ry,rot,c});
+      }
+      for (let i=0; i<Math.floor(complexity*.28); i++) {
+        const x = rand(0, 80);
+        const y = rand(220, H-220);
+        const rx = rand(15, 80);
+        const ry = rand(20, 130);
+        const c = colorFor(i+200, rand(.18,.5));
+        drawBlob(W/2 - x, y, rx, ry, rand(-.8,.8), c, softness, i+200);
+        drawBlob(W/2 + x, y, rx, ry, rand(-.8,.8), c, softness, i+200, true);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(W/2,90); ctx.lineTo(W/2,H-90); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawBlob(x,y,rx,ry,rot,fill,softness,seed,mirror=false){
+      ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.fillStyle = fill; ctx.filter = `blur(${softness/3}px)`;
+      ctx.beginPath();
+      const points = 18;
+      for(let p=0;p<=points;p++){
+        const a = (Math.PI*2/points)*p;
+        const noise = .72 + Math.abs(Math.sin(seed*3.1 + p*1.73))*0.55 + Math.random()*0.18;
+        const px = Math.cos(a)*rx*noise;
+        const py = Math.sin(a)*ry*(.78 + Math.random()*.35);
+        if(p===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+
+    function interpret(){
+      const text = document.getElementById('vision').value.trim().toLowerCase();
+      const box = document.getElementById('result');
+      if(!text){
+        box.innerHTML = `<h2>Write what you see first</h2><p>Your description is the raw material for the reflection.</p>`;
+        return;
+      }
+      const tags = [];
+      const has = (...words) => words.some(w => text.includes(w));
+      if(has('butterfly','bird','wings','angel')) tags.push(['Imagination and openness','You may naturally look for movement, transformation, and possibility inside unclear situations.']);
+      if(has('face','mask','person','people','eyes','skull')) tags.push(['Human focus','You may quickly search for identity, emotion, intention, and hidden meaning in what you see.']);
+      if(has('animal','cat','dog','wolf','bat','insect','creature')) tags.push(['Instinct and sensitivity','You may notice living systems, body language, danger, comfort, or protective energy before abstract details.']);
+      if(has('heart','lungs','body','anatomy','organ','bones','spine')) tags.push(['Body-based thinking','You may connect ideas through structure, function, and physical reality. You probably like understanding how things work from the inside.']);
+      if(has('monster','demon','blood','dark','death','scary','fear')) tags.push(['Shadow awareness','You may be comfortable noticing tension, risk, or uncomfortable truths that others ignore.']);
+      if(has('flower','tree','leaf','plant','nature')) tags.push(['Growth orientation','You may read ambiguity as something organic, developing, and full of quiet patterns.']);
+      if(has('machine','robot','engine','code','data','technology')) tags.push(['System thinking','You may translate visual chaos into mechanisms, logic, workflows, or hidden order.']);
+      if(has('two','pair','mirror','symmetry','facing','opposite')) tags.push(['Relational thinking','You may notice balance, contrast, partnership, or conflict between two sides of the same thing.']);
+      if(tags.length === 0) tags.push(['Personal symbolism','Your answer seems specific and personal. That often means you are using memory, association, and imagination rather than choosing the obvious shape.']);
+
+      const primary = tags[0];
+      const extra = tags.slice(1,3).map(t => `<p><strong>${t[0]}:</strong> ${t[1]}</p>`).join('');
+      box.innerHTML = `<h2>${primary[0]}</h2><p>${primary[1]}</p>${extra}<p class="note">This is a creative reflection only, not a psychological test result.</p>`;
+    }
+
+    function resetResult(){
+      document.getElementById('result').innerHTML = `<h2>Your reflection will appear here</h2><p>Generate an inkblot, write what you see, then click “Interpret My Answer”.</p>`;
+    }
+    function downloadPNG(){
+      const a = document.createElement('a'); a.download = 'rorschach-inkblot.png'; a.href = canvas.toDataURL('image/png'); a.click();
+    }
+    function downloadSVG(){
+      const img = canvas.toDataURL('image/png');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200"><image href="${img}" width="1200" height="1200"/></svg>`;
+      const blob = new Blob([svg], {type:'image/svg+xml'});
+      const a = document.createElement('a'); a.download = 'rorschach-inkblot.svg'; a.href = URL.createObjectURL(blob); a.click(); URL.revokeObjectURL(a.href);
+    }
+    generate();
+  </script>
+</body>
+</html>
